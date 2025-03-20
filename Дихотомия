@@ -1,0 +1,72 @@
+#include <iostream> 
+#include <cmath>
+#include <iomanip>
+#include <locale>
+
+using namespace std;
+
+// Метод дихотомии для поиска минимума функции
+double dichotomy_method(double (*func)(double), double a, double b, double epsilon, int& iterations, int& func_evals) {
+    double delta = epsilon / 2; // Малое смещение для вычисления точек
+    double x1, x2, f1, f2;
+    iterations = 0;
+    func_evals = 0;
+
+    cout << "Итерация |   a    |   b    |   x1   |   x2   |  f(x1)  |  f(x2)  | Новый интервал\n";
+    cout << "-------------------------------------------------------------------------------\n";
+
+    while ((b - a) / 2 > epsilon) {
+        iterations++;
+        x1 = (a + b) / 2 - delta;
+        x2 = (a + b) / 2 + delta;
+        f1 = func(x1);
+        f2 = func(x2);
+        func_evals += 2; // Два вызова функции за итерацию
+
+        cout << setw(8) << iterations << " | "
+            << setw(6) << fixed << setprecision(3) << a << " | "
+            << setw(6) << b << " | "
+            << setw(6) << x1 << " | "
+            << setw(6) << x2 << " | "
+            << setw(8) << f1 << " | "
+            << setw(8) << f2 << " | ";
+
+        if (f1 < f2) {
+            b = x2;
+            cout << "[" << a << ", " << b << "]\n";
+        }
+        else {
+            a = x1;
+            cout << "[" << a << ", " << b << "]\n";
+        }
+    }
+
+    return (a + b) / 2;
+}
+
+// Исходная функция
+double func(double x) {
+    return pow(x, 3) + pow(x, 4) / 4; // f(x) = x^3 + x^4 / 4
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+
+    double a = -20, b = 20;
+    double epsilon = 0.005;
+    int iterations = 0, func_evals = 0;
+
+    cout << "Результаты тестирования программы для функции f(x) = x^3 + x^4 / 4\n";
+    cout << "Поиск минимума методом дихотомии на интервале [" << a << ", " << b << "] с точностью " << epsilon << "\n\n";
+
+    double minimum = dichotomy_method(func, a, b, epsilon, iterations, func_evals);
+
+    cout << "\n-----------------------------------------------------------\n";
+    cout << "Найденный минимум: x = " << fixed << setprecision(5) << minimum << "\n";
+    cout << "Значение функции в минимуме: f(x) = " << func(minimum) << "\n";
+    cout << "Число итераций: " << iterations << "\n";
+    cout << "Число вычислений функции: " << func_evals << "\n";
+    cout << "-----------------------------------------------------------\n";
+
+    return 0;
+}
