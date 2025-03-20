@@ -1,0 +1,63 @@
+#include <iostream>
+#include <functional>
+#include <cmath>
+#include <locale>
+#include <iomanip> // Для форматирования вывода
+
+using namespace std;
+
+const double PHI = (sqrt(5) - 1) / 2; // Золотое сечение (τ)
+
+double golden_section_search(function<double(double)> function, double a, double b, double epsilon, int& iterations, int& func_evals) {
+    double x1 = a + (1 - PHI) * (b - a);
+    double x2 = a + PHI * (b - a);
+    double f1 = function(x1);
+    double f2 = function(x2);
+    iterations = 0;
+    func_evals = 2; // Два первых вычисления функции
+
+    cout << "Итерация | a          | b          | x1         | x2         | f(x1)       | f(x2)       " << endl;
+    cout << "--------------------------------------------------------------------------------" << endl;
+
+    while ((b - a) > epsilon) {
+        cout << setw(8) << iterations << " | " << setw(10) << a << " | " << setw(10) << b
+            << " | " << setw(10) << x1 << " | " << setw(10) << x2
+            << " | " << setw(10) << f1 << " | " << setw(10) << f2 << endl;
+
+        iterations++;
+
+        if (f1 < f2) {
+            b = x2;
+            x2 = x1;
+            f2 = f1;
+            x1 = a + (1 - PHI) * (b - a);
+            f1 = function(x1);
+        }
+        else {
+            a = x1;
+            x1 = x2;
+            f1 = f2;
+            x2 = a + PHI * (b - a);
+            f2 = function(x2);
+        }
+        func_evals++;
+    }
+
+    cout << "--------------------------------------------------------------------------------" << endl;
+    return (a + b) / 2;
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    auto func = [](double x) { return pow(x, 3) + pow(x, 4) / 4; }; // f(x) = x^3 + x^4 / 4
+    int iterations = 0, func_evals = 0;
+    double minimum = golden_section_search(func, -20, 20, 0.005, iterations, func_evals);
+    double min_value = func(minimum);
+
+    cout << "\nНайденный минимум: " << minimum << endl;
+    cout << "Значение функции в минимуме: " << min_value << endl;
+    cout << "Количество итераций: " << iterations << endl;
+    cout << "Количество вычислений функции: " << func_evals << endl;
+
+    return 0;
+}
