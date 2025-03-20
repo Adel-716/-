@@ -1,0 +1,75 @@
+#include <iostream>
+#include <functional>
+#include <cmath>
+#include <locale>
+
+using namespace std;
+
+// Функция для поразрядного метода с подробным выводом промежуточных результатов
+double uniform_search(function<double(double)> func, double a, double b, double epsilon, int& iterations, int& func_evals) {
+    double h = (b - a) / 4.0; // Начальный шаг
+    double x0 = a;
+    double x1 = x0 + h;
+    iterations = 0;
+    func_evals = 0;
+
+    cout << "Начало поиска минимума на отрезке [" << a << ", " << b << "] с epsilon = " << epsilon << "\n";
+    cout << "-----------------------------------------------------------\n";
+
+    while (fabs(h) > epsilon) {
+        iterations++;
+
+        // Вычисляем значения функции в точках x0 и x1 и увеличиваем счётчик вычислений
+        double f0 = func(x0);
+        func_evals++;
+        double f1 = func(x1);
+        func_evals++;
+
+        // Вывод текущего состояния итерации
+        cout << "Итерация " << iterations
+            << ": x0 = " << x0 << ", f(x0) = " << f0
+            << "; x1 = " << x1 << ", f(x1) = " << f1
+            << "; h = " << h << "\n";
+
+        // Движение вперед с шагом h, если значение функции уменьшается
+        if (f1 < f0) {
+            x0 = x1;
+            x1 = x0 + h;
+            if (x1 > b) {  // Проверка выхода за правую границу
+                x1 = b;
+            }
+        }
+        else {
+            // Если улучшения нет, уменьшаем шаг и идем в обратную сторону
+            h /= 4.0;
+            x1 = x0 - h;
+            if (x1 < a) {  // Проверка выхода за левую границу
+                x1 = a;
+            }
+        }
+    }
+
+    cout << "-----------------------------------------------------------\n";
+    return x0;
+}
+
+int main() {
+    // Настройка локали для корректного отображения русских символов
+    setlocale(LC_ALL, "RU");
+
+    // Определяем функцию f(x) = x^3 + x^4 / 4
+    auto func = [](double x) { return pow(x, 3) + pow(x, 4) / 4; };
+
+    int iterations = 0;
+    int func_evals = 0;
+
+    // Запускаем поиск минимума на отрезке [-20, 20] с точностью epsilon = 0.005
+    int min_x = uniform_search(func, -20, 20, 0.005, iterations, func_evals);
+
+    cout << "\nРезультаты тестирования программы:\n";
+    cout << "Найденный минимум: " << min_x << "\n";
+    cout << "Количество итераций: " << iterations << "\n";
+    cout << "Количество вычислений функции: " << func_evals << "\n";
+
+    return 0;
+}
