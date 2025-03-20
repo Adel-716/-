@@ -1,0 +1,93 @@
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+
+// Функция
+double f(double x) {
+    return x * x * x + x * x * x * x / 4;
+}
+
+// Первая производная функции
+double df(double x) {
+    return 3 * x * x + x * x * x;
+}
+
+// Метод хорд для нахождения минимума
+double chordMethod(double a, double b, double epsilon) {
+    double fa = df(a);  // Производная в точке a
+    double fb = df(b);  // Производная в точке b
+    double x_new;
+    double f_new;
+
+    int iterations = 0;
+    int function_calls = 2; // Учитываем два первых вычисления производной
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Итерация\t a\t\t b\t\t x_new\t\t f'(x_new)\n";
+    std::cout << "-----------------------------------------------------------------------------\n";
+
+    // Проверка, чтобы производные на концах интервала имели разные знаки
+    if (fa * fb > 0) {
+        std::cerr << "Производные на концах интервала имеют одинаковый знак!" << std::endl;
+
+        // Возвращаем ту границу, где значение функции меньше
+        if (f(a) < f(b)) {
+            std::cout << "Минимум на левой границе интервала: x = " << a << ", f(x) = " << f(a) << std::endl;
+            return a;
+        }
+        else {
+            std::cout << "Минимум на правой границе интервала: x = " << b << ", f(x) = " << f(b) << std::endl;
+            return b;
+        }
+    }
+
+    while (std::abs(fa) > epsilon) {
+        // Находим x~ (точка пересечения хорды с осью)
+        x_new = a - (fa * (b - a)) / (fb - fa);
+        f_new = df(x_new);  // Производная в точке x_new
+        function_calls++;
+
+        // Вывод текущей итерации
+        std::cout << iterations << "\t\t" << a << "\t" << b << "\t" << x_new << "\t" << f_new << "\n";
+
+        // Проверка на окончание поиска
+        if (std::abs(f_new) <= epsilon) {
+            std::cout << "-----------------------------------------------------------------------------\n";
+            std::cout << "Количество итераций: " << iterations << std::endl;
+            std::cout << "Число вычислений функций: " << function_calls << std::endl;
+            return x_new;
+        }
+
+        // Переход к новому отрезку
+        if (f_new > 0) {
+            b = x_new;  // Обновляем правую границу
+            fb = f_new; // Обновляем значение производной в правой границе
+        }
+        else {
+            a = x_new;  // Обновляем левую границу
+            fa = f_new; // Обновляем значение производной в левой границе
+        }
+
+        iterations++;
+    }
+
+    std::cout << "-----------------------------------------------------------------------------\n";
+    std::cout << "Количество итераций: " << iterations << std::endl;
+    std::cout << "Число вычислений функций: " << function_calls << std::endl;
+
+    return x_new;
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+    double a = -20;  // Левая граница интервала
+    double b = 20;   // Правая граница интервала
+    double epsilon = 1e-6;  // Точность
+
+    double minimum = chordMethod(a, b, epsilon);
+    if (!std::isnan(minimum)) {
+        std::cout << "Найденный минимум: x = " << minimum << ", f(x) = " << f(minimum) << std::endl;
+    }
+
+    return 0;
+}
