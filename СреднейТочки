@@ -1,0 +1,80 @@
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+
+using namespace std;
+
+// Глобальная функция f(x) = x^3 + x^4/4
+double func(double x) {
+    return (x * x * x) + (x * x * x * x) / 4;
+}
+
+// Глобальная функция df(x) = 3x^2 + x^3 = x^2*(3 + x)
+int df_calls = 0; // Счётчик обращений к df
+
+double df(double x) {
+    df_calls++; // Увеличиваем счётчик при каждом вызове
+    return 3 * x * x + x * x * x;
+}
+
+// Метод бисекции для поиска минимума функции через поиск нуля производной
+double midpointMethod(double a, double b, double epsilon, int& iterations) {
+    double xc;
+    iterations = 0;
+
+    cout << "Итерация | a          | b          | xc         | df(xc)" << endl;
+    cout << "----------------------------------------------------------" << endl;
+
+    while ((b - a) > epsilon) {
+        xc = (a + b) / 2;
+        double dfxc = df(xc);
+
+        cout << setw(8) << iterations << " | "
+            << setw(10) << a << " | " << setw(10) << b
+            << " | " << setw(10) << xc << " | " << setw(10) << dfxc << endl;
+
+        // Если df(xc) близка к нулю, считаем, что нашли корень производной
+        if (fabs(dfxc) < epsilon) {
+            break;
+        }
+
+        // Для интервала [-20, 20] производная df(x) имеет два корня:
+        // x = 0 (локальный максимум) и x = -3 (локальный минимум).
+        // Чтобы метод сходился к минимуму, если xc оказывается очень близко к 0,
+        // выбираем ветку, ведущую к отрицательной части интервала.
+        if (fabs(xc) < 1e-12) {
+            b = 0;
+        }
+        else if (dfxc > 0) {  // Если производная положительна, минимум находится слева
+            b = xc;
+        }
+        else {                // Если производная отрицательна, минимум находится справа
+            a = xc;
+        }
+
+        iterations++;
+    }
+
+    cout << "----------------------------------------------------------" << endl;
+    return (a + b) / 2;
+}
+
+int main() {
+    setlocale(LC_ALL, "RU");
+
+    double a = -20;         // Начало интервала
+    double b = 0;           // Конец интервала
+    double epsilon = 0.005;  // Точность
+    int iterations = 0;     // Счётчик итераций
+
+    // Находим точку, где производная равна нулю (соответствующую минимуму)
+    double x_min = midpointMethod(a, b, epsilon, iterations);
+    double f_min = func(x_min);
+
+    cout << "\nНайденная точка минимума: " << x_min << endl;
+    cout << "Значение функции в точке минимума: " << f_min << endl;
+    cout << "Количество итераций: " << iterations << endl;
+    cout << "Количество обращений к df(x): " << df_calls << endl;
+
+    return 0;
+}
