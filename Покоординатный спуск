@@ -1,0 +1,188 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <algorithm>
+#include <Windows.h>
+
+using namespace std;
+
+const double EPSILON = 1e-3;
+const int GRID_SIZE = 20;
+vector<vector<double>> trajectory;
+
+// Упрощенные символы для отображения
+const char BORDER_TOP_LEFT = '+';
+const char BORDER_TOP_RIGHT = '+';
+const char BORDER_BOTTOM_LEFT = '+';
+const char BORDER_BOTTOM_RIGHT = '+';
+const char BORDER_HORIZONTAL = '-';
+const char BORDER_VERTICAL = '|';
+const char POINT = 'o';
+const char START = 'S';
+const char END = 'E';
+const char BACKGROUND = '.';
+
+// Целевая функция
+double targetFunction(const vector<double>& x) {
+    return pow(x[0], 4) - 2 * x[0] * x[1] + pow(x[1], 4) - pow(x[0], 2) - pow(x[1], 2);
+}
+
+vector<double> exploratorySearch(const function<double(vector<double>)>& f,
+    const vector<double>& x,
+    const vector<double>& delta) {
+    vector<double> xNew = x;
+
+    for (size_t i = 0; i < x.size(); ++i) {
+        double originalValue = xNew[i];
+        xNew[i] = originalValue + delta[i];
+        double valuePlus = f(xNew);
+        xNew[i] = originalValue - delta[i];
+        double valueMinus = f(xNew);
+
+        if (valuePlus < f(xNew)) {
+            xNew[i] = originalValue + delta[i];
+        }
+        else if (valueMinus < f(xNew)) {
+            xNew[i] = originalValue - delta[i];
+        }
+        else {
+            xNew[i] = originalValue;
+        }
+    }
+    return xNew;
+}
+
+void printTrajectory() {
+    cout << "\nТраектория движения:\n";
+    char grid[GRID_SIZE][GRID_SIZE];
+
+    // Инициализация сетки
+    for (int i = 0; i < GRID_SIZE; ++i) {
+        for (int j = 0; j < GRID_SIZE; ++j) {
+            grid[i][j] = BACKGROUND;
+        }
+    }
+
+    // Находим границы для масштабирования
+    double min_x = trajectory[0][0], max_x = trajectory[0][0];
+    double min_y = trajectory[0][1], max_y = trajectory[0][1];
+    for (const auto& p : trajectory) {
+        min_x = min(min_x, p[0]);
+        max_x = max(max_x, p[0]);
+        min_y = min(min_y, p[1]);
+        max_y = max(max_y, p[1]);
+    }
+
+    // Добавляем отступы
+    double x_range = max_x - min_x;
+    double y_range = max_y - min_y;
+    min_x -= 0.1 * x_range; max_x += 0.1 * x_range;
+    min_y -= 0.1 * y_range; max_y += 0.1 * y_range;
+
+    // Рисуем траекторию
+    for (size_t k = 0; k < trajectory.size(); ++k) {
+        int i = static_cast<int>((trajectory[k][1] - min_y) / (max_y - min_y) * (GRID_SIZE - 1));
+        int j = static_cast<int>((trajectory[k][0] - min_x) / (max_x - min_x) * (GRID_SIZE - 1));
+        i = max(0, min(GRID_SIZE - 1, i));
+        j = max(0, min(GRID_SIZE - 1, j));
+
+        if (k == 0) grid[i][j] = START;
+        else if (k == trajectory.size() - 1) grid[i][j] = END;
+        else if (grid[i][j] == BACKGROUND) grid[i][j] = POINT;
+    }
+
+    // Выводим сетку с рамками
+    cout << BORDER_TOP_LEFT;
+    for (int j = 0; j < GRID_SIZE * 2 - 1; ++j) cout << BORDER_HORIZONTAL;
+    cout << BORDER_TOP_RIGHT << "\n";
+
+    for (int i = 0; i < GRID_SIZE; ++i) {
+        cout << BORDER_VERTICAL;
+        for (int j = 0; j < GRID_SIZE; ++j) {
+            cout << grid[i][j] << " ";
+        }
+        cout << BORDER_VERTICAL << "\n";
+    }
+
+    cout << BORDER_BOTTOM_LEFT;
+    for (int j = 0; j < GRID_SIZE * 2 - 1; ++j) cout << BORDER_HORIZONTAL;
+    cout << BORDER_BOTTOM_RIGHT << "\n";
+
+    cout << START << " - начальная точка\n";
+    cout << END << " - конечная точка\n";
+    cout << POINT << " - промежуточные точки\n";
+}
+
+void optimize(const function<double(vector<double>)>& f, vector<double> initialPoint) {
+    vector<double> x = initialPoint;
+    trajectory.clear();
+    trajectory.push_back(x);
+
+    vector<double> delta = { 0.5, 0.5 };
+    double alpha = 2.0;
+    int iterations = 0;
+
+    while (true) {
+        vector<double> xNew = exploratorySearch(f, x, delta);
+
+        if (f(xNew) >= f(x)) {
+            for (size_t i = 0; i < delta.size(); ++i) {
+                delta[i] *= 0.5;
+            }
+
+            if (delta[0] < EPSILON && delta[1] < EPSILON) {
+                break;
+            }
+        }
+        else {
+            vector<double> direction(x.size());
+            for (size_t i = 0; i < x.size(); ++i) {
+                direction[i] = xNew[i] - x[i];
+            }
+
+            vector<double> xAccelerated(x.size());
+            for (size_t i = 0; i < x.size(); ++i) {
+                xAccelerated[i] = xNew[i] + alpha * direction[i];
+            }
+
+            if (f(xAccelerated) < f(xNew)) {
+                x = xAccelerated;
+            }
+            else {
+                x = xNew;
+            }
+            trajectory.push_back(x);
+        }
+        iterations++;
+    }
+
+    cout << "\nРезультаты оптимизации:\n";
+    cout << fixed << setprecision(5);
+    cout << "Точка минимума: (" << x[0] << ", " << x[1] << ")\n";
+    cout << "Значение функции: " << f(x) << "\n";
+    cout << "Итераций: " << iterations << "\n";
+}
+
+int main() {
+    SetConsoleOutputCP(CP_UTF8);
+    setlocale(LC_ALL, "Russian");
+
+    vector<vector<double>> initialPoints = {
+        {0, 0},    // Седловая точка
+        {1, 1},     // Локальный минимум
+        {-1, -1},   // Симметричная точка
+        {0.5, 0.5}  // Близко к минимуму
+    };
+
+    for (const auto& point : initialPoints) {
+        cout << "\n======================================\n";
+        cout << "Начальная точка: (" << point[0] << ", " << point[1] << ")\n";
+        optimize(targetFunction, point);
+        printTrajectory();
+        cout << "======================================\n";
+    }
+
+    return 0;
+}
