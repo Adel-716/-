@@ -1,104 +1,121 @@
-def f(x1, x2):
-    """Целевая функция"""
-    return x1 ** 4 - 2 * x1 * x2 + x2 ** 4 - x1 ** 2 - x2 ** 2
+import math
+from typing import Callable, List
 
+# Параметры алгоритма
+EPSILON = 1e-3  # Точность поиска
+GRID_SIZE = 15  # Размер сетки для визуализации
+trajectory = []  # Список для хранения точек траектории
 
-def print_ascii_map(trajectory, width=40, height=20):
-    """Выводит ASCII-карту с траекторией поиска"""
-    # Диапазон координат для отображения
-    x_min, x_max = -1.5, 1.5
-    y_min, y_max = -1.5, 1.5
+def main():
+    # Новая целевая функция: f(x) = x1^4 - 2x1x2 + x2^4 - x1^2 - x2^2
+    f = lambda x: x[0]**4 - 2 * x[0] * x[1] + x[1]**4 - x[0]**2 - x[1]**2
 
-    # Создаем пустую карту
-    grid = [['·' for _ in range(width)] for _ in range(height)]
+    # Набор начальных точек для тестирования (3 точки)
+    initial_points = [
+        [-1, -1],    # Точка в отрицательной области
+        [1, 1],       # Точка в положительной области
+        [0.5, 0.5]   # Точка близкая к минимуму
+    ]
 
-    # Отмечаем стационарные точки
-    points = {
-        (1, 1): 'M',  # Минимум
-        (-1, -1): 'M',  # Минимум
-        (0, 0): 'S'  # Седловая точка
-    }
+    # Запуск оптимизации для каждой начальной точки
+    for point in initial_points:
+        global trajectory
+        trajectory = []  # Очищаем предыдущую траекторию
+        print("\n══════════════════════════════════════")
+        print(f"Начальная точка: ({point[0]}, {point[1]})")
+        optimize(f, point)  # Запуск оптимизации
+        print_trajectory()  # Визуализация траектории
+        print("══════════════════════════════════════")
 
-    for (x, y), symbol in points.items():
-        col = int((x - x_min) / (x_max - x_min) * (width - 1))
-        row = int((y_max - y) / (y_max - y_min) * (height - 1))  # Инвертируем y для корректного отображения
-        if 0 <= row < height and 0 <= col < width:
-            grid[row][col] = symbol
+# Основной метод оптимизации (без изменений)
+def optimize(f: Callable[[List[float]], float], initial_point: List[float]):
+    x = initial_point.copy()
+    trajectory.append(x.copy())
+    delta = [0.5, 0.5]
+    alpha = 2.0
+    iterations = 0
 
-    # Отмечаем траекторию
-    for i, (x, y) in enumerate(trajectory):
-        col = int((x - x_min) / (x_max - x_min) * (width - 1))
-        row = int((y_max - y) / (y_max - y_min) * (height - 1))
-        if 0 <= row < height and 0 <= col < width:
-            # Используем разные символы для разных этапов пути
-            char = str(i % 10) if i < 10 else chr(ord('a') + (i - 10) % 26)
-            if grid[row][col] == '·':  # Не перезаписываем стационарные точки
-                grid[row][col] = char
+    while True:
+        x_new = exploratory_search(f, x, delta)
 
-    # Выводим карту
-    print("+" + "-" * width + "+")
-    for row in grid:
-        print("|" + "".join(row) + "|")
-    print("+" + "-" * width + "+")
-
-    print("M - минимум (1,1) или (-1,-1)")
-    print("S - седловая точка (0,0)")
-    print("Цифры/буквы - траектория поиска (по порядку)")
-
-
-def coordinate_search(x0, delta, epsilon=0.001, max_iter=100):
-    """Метод покоординатного поиска с визуализацией"""
-    x1, x2 = x0
-    delta1, delta2 = delta
-    trajectory = [(x1, x2)]  # Сохраняем траекторию
-
-    for iteration in range(max_iter):
-        # Исследующий поиск
-        best_x1, best_x2 = x1, x2
-        best_value = f(x1, x2)
-
-        # Проверяем все возможные направления
-        for dx1, dx2 in [(delta1, 0), (-delta1, 0), (0, delta2), (0, -delta2)]:
-            new_x1 = x1 + dx1
-            new_x2 = x2 + dx2
-            new_value = f(new_x1, new_x2)
-
-            if new_value < best_value:
-                best_x1, best_x2 = new_x1, new_x2
-                best_value = new_value
-
-        # Проверка улучшения
-        if best_value < f(x1, x2):
-            # Ускоренный шаг
-            x1 += 2 * (best_x1 - x1)
-            x2 += 2 * (best_x2 - x2)
-            trajectory.append((x1, x2))
-        else:
-            # Уменьшаем шаг
-            delta1 /= 2
-            delta2 /= 2
-            # Критерий остановки
-            if delta1 < epsilon and delta2 < epsilon:
+        if f(x_new) >= f(x):
+            for i in range(len(delta)):
+                delta[i] *= 0.5
+            if delta[0] < EPSILON and delta[1] < EPSILON:
                 break
+        else:
+            direction = [x_new[i] - x[i] for i in range(len(x))]
 
-    return (x1, x2), f(x1, x2), trajectory
+            x_accelerated = [x_new[i] + alpha * direction[i] for i in range(len(x))]
 
+            if f(x_accelerated) < f(x_new):
+                x = x_accelerated
+            else:
+                x = x_new
+            trajectory.append(x.copy())
+        iterations += 1
 
-# Начальные параметры (попробуйте разные начальные точки)
-start_points = [
-    (0.5, 0.5),  # Сходится к (1,1)
-    (-0.5, -0.5),  # Сходится к (-1,-1)
-    (0.1, 0.1)  # Близко к седловой точке
-]
+    print("\nРезультаты оптимизации:")
+    print(f"Точка минимума: ({x[0]:.4f}, {x[1]:.4f})")
+    print(f"Значение функции: {f(x):.4f}")
+    print(f"Итераций: {iterations}")
 
-for i, x0 in enumerate(start_points):
-    delta = (0.2, 0.2)  # Начальный шаг
+# Метод исследующего поиска (без изменений)
+def exploratory_search(f: Callable[[List[float]], float], x: List[float], delta: List[float]) -> List[float]:
+    x_new = x.copy()
 
-    print(f"\nПоиск #{i + 1} из начальной точки {x0}")
-    result, f_value, trajectory = coordinate_search(x0, delta)
+    for i in range(len(x)):
+        original_value = x_new[i]
 
-    # Вывод результатов
-    print(f"Найденная точка: ({result[0]:.4f}, {result[1]:.4f})")
-    print(f"Значение функции: {f_value:.4f}")
-    print("Траектория поиска:")
-    print_ascii_map(trajectory)
+        x_new[i] = original_value + delta[i]
+        value_plus = f(x_new)
+
+        x_new[i] = original_value - delta[i]
+        value_minus = f(x_new)
+
+        if value_plus < f(x_new):
+            x_new[i] = original_value + delta[i]
+        elif value_minus < f(x_new):
+            x_new[i] = original_value - delta[i]
+        else:
+            x_new[i] = original_value
+    return x_new
+
+# Метод для визуализации траектории (с измененным диапазоном)
+def print_trajectory():
+    print("\nВизуализация траектории:")
+    grid = [['·' for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+
+    # Новый диапазон отображения (подходит для новой функции)
+    min_x, max_x = -1.5, 1.5
+    min_y, max_y = -1.5, 1.5
+
+    # Рисуем траекторию
+    for point in trajectory:
+        x = int((point[0] - min_x) / (max_x - min_x) * (GRID_SIZE - 1))
+        y = int((point[1] - min_y) / (max_y - min_y) * (GRID_SIZE - 1))
+        x = min(max(x, 0), GRID_SIZE - 1)
+        y = min(max(y, 0), GRID_SIZE - 1)
+        grid[y][x] = '●'
+
+    # Отмечаем известные локальные минимумы (примерные)
+    min_x_pos1 = int((0.9 - min_x) / (max_x - min_x) * (GRID_SIZE - 1))
+    min_y_pos1 = int((0.9 - min_y) / (max_y - min_y) * (GRID_SIZE - 1))
+    grid[min_y_pos1][min_x_pos1] = '★'
+
+    min_x_pos2 = int((-0.9 - min_x) / (max_x - min_x) * (GRID_SIZE - 1))
+    min_y_pos2 = int((-0.9 - min_y) / (max_y - min_y) * (GRID_SIZE - 1))
+    grid[min_y_pos2][min_x_pos2] = '★'
+
+    # Выводим сетку с рамками
+    print("┌" + "──" * GRID_SIZE + "┐")
+
+    for row in grid:
+        print("│" + " ".join(row) + " │")
+
+    print("└" + "──" * GRID_SIZE + "┘")
+
+    print("● - траектория  ★ - минимумы")
+
+if __name__ == "__main__":
+    main()
