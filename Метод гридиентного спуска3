@@ -1,0 +1,132 @@
+import math
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Callable
+
+
+def f(x1: float, x2: float) -> float:
+    """Целевая функция: f(x) = x1^4 - 2x1x2 + x2^4 - x1^2 - x2^2"""
+    return x1 ** 4 - 2 * x1 * x2 + x2 ** 4 - x1 ** 2 - x2 ** 2
+
+
+def grad_f(x1: float, x2: float) -> List[float]:
+    """Градиент целевой функции"""
+    return [
+        4 * x1 ** 3 - 2 * x2 - 2 * x1,  # ∂f/∂x1
+        -2 * x1 + 4 * x2 ** 3 - 2 * x2  # ∂f/∂x2
+    ]
+
+
+def norm(vector: List[float]) -> float:
+    """Евклидова норма вектора"""
+    return math.sqrt(sum(vi ** 2 for vi in vector))
+
+
+def gradient_descent(
+        f: Callable[[float, float], float],
+        grad_f: Callable[[float, float], List[float]],
+        x0: List[float],
+        epsilon: float = 1e-5,
+        initial_alpha: float = 0.1,
+        verbose: bool = True
+) -> Tuple[List[float], float, int, List[Tuple[float, float]]]:
+    """
+    Реализация градиентного спуска с адаптивным шагом и визуализацией
+
+    Параметры:
+        f - целевая функция
+        grad_f - функция градиента
+        x0 - начальная точка
+        epsilon - точность решения
+        initial_alpha - начальный размер шага
+        verbose - флаг вывода процесса
+
+    Возвращает:
+        x_min - найденная точка минимума
+        f_min - значение функции в минимуме
+        iter_count - количество итераций
+        trajectory - список точек траектории
+    """
+    # Инициализация
+    x = x0.copy()
+    alpha = initial_alpha
+    f_x = f(*x)
+    iter_count = 0
+    trajectory = [tuple(x)]  # Сохраняем траекторию
+
+    if verbose:
+        print(f"Начальная точка: {x}, f(x) = {f_x:.6f}")
+        print("Итерация\tx1\t\tx2\t\tf(x)\t\talpha\t\t||∇f||")
+
+    while True:
+        # Вычисление градиента и проверка условия останова
+        gradient = grad_f(*x)
+        grad_norm = norm(gradient)
+
+        if verbose and iter_count % 100 == 0:
+            print(f"{iter_count}\t\t{x[0]:.6f}\t{x[1]:.6f}\t{f_x:.6f}\t{alpha:.6f}\t{grad_norm:.6f}")
+
+        if grad_norm < epsilon:
+            break
+
+        # Пробный шаг
+        while True:
+            y = [x[0] - alpha * gradient[0], x[1] - alpha * gradient[1]]
+            f_y = f(*y)
+
+            if f_y < f_x:  # Если улучшение
+                x, f_x = y, f_y
+                trajectory.append(tuple(x))  # Добавляем точку в траекторию
+                break
+            else:  # Уменьшение шага
+                alpha /= 2
+                if verbose and iter_count % 100 == 0:
+                    print(f"Уменьшаем шаг: alpha = {alpha:.6f}")
+
+        iter_count += 1
+
+    if verbose:
+        print("\nРезультат:")
+        print(f"x_min = [{x[0]:.8f}, {x[1]:.8f}]")
+        print(f"f_min = {f_x:.12f}")
+        print(f"Итераций: {iter_count}")
+        print(f"Норма градиента: {grad_norm:.10f}")
+        print(f"Финальный шаг: {alpha:.10f}")
+
+    return x, f_x, iter_count, trajectory
+
+
+def plot_trajectory(trajectory: List[Tuple[float, float]], title: str = "Траектория градиентного спуска"):
+    """Визуализация траектории оптимизации"""
+    plt.figure(figsize=(10, 8))
+
+    # Разделяем координаты x1 и x2
+    x1_coords = [point[0] for point in trajectory]
+    x2_coords = [point[1] for point in trajectory]
+
+    # Рисуем траекторию
+    plt.plot(x1_coords, x2_coords, 'b-', linewidth=1, label='Траектория')
+    plt.scatter(x1_coords, x2_coords, c='blue', s=20)
+
+    # Начальная и конечная точки
+    plt.scatter([x1_coords[0]], [x2_coords[0]], c='red', s=100, label='Начальная точка')
+    plt.scatter([x1_coords[-1]], [x2_coords[-1]], c='green', s=100, label='Точка минимума')
+
+    # Настройки графика
+    plt.title(title)
+    plt.xlabel('x1')
+    plt.ylabel('x2')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+if __name__ == "__main__":
+    # Тест для точки (2, 2)
+    print("\nТест для точки (2, 2):")
+    x_opt, f_opt, iterations, traj = gradient_descent(
+        f, grad_f, [2.0, 2.0],
+        epsilon=1e-3,
+        initial_alpha=0.001,
+        verbose=True
+    )
+    plot_trajectory(traj, "Траектория для начальной точки (2, 2)")
